@@ -42,7 +42,8 @@ jobs:
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
         run: |
-          export GNUPGHOME="$(mktemp -d)"
+          GNUPGHOME=$(mktemp -d)
+          export GNUPGHOME
           chmod 700 "$GNUPGHOME"
           trap 'rm -rf "$GNUPGHOME"' EXIT
           printf '%s' "$APT_SIGNING_KEY" | gpg --batch --import
@@ -67,8 +68,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd dist
-          sha256sum *.deb > SHA256SUMS
-          gh release create "$RELEASE_TAG" *.deb SHA256SUMS \
+          sha256sum ./*.deb > SHA256SUMS
+          gh release create "$RELEASE_TAG" ./*.deb SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" --title "cpath $RELEASE_TAG" \
             --notes 'Copy canonical file and directory paths on macOS, Ubuntu, and Debian. Includes zsh completion, Homebrew installation, and a signed APT feed. See the README for installation and usage.'
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
