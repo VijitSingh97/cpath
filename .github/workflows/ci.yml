@@ -30,7 +30,8 @@ jobs:
           stage=$(mktemp -d)
           make install DESTDIR="$stage" PREFIX=/usr
           "$stage/usr/bin/cpath" --version
-          zsh -fc 'fpath=("$1" $fpath); autoload -Uz compinit; compinit -D; [[ ${_comps[cpath]} == _cpath ]]' -- "$stage/usr/share/zsh/site-functions"
+          # Ignore insecure system completion directories on hosted runners.
+          zsh -fc 'fpath=("$1" $fpath); autoload -Uz compinit; compinit -D -i; [[ ${_comps[cpath]} == _cpath ]]' -- "$stage/usr/share/zsh/site-functions"
 
   debian:
     name: Test Debian package
