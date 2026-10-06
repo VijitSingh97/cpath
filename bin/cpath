@@ -1,0 +1,36 @@
+#!/bin/sh
+# Copy a canonical filesystem path to the desktop clipboard.
+case "${1:-}" in
+    -h|--help)
+        printf 'Usage: cpath FILE\nCopy the absolute path of an existing file or directory to the clipboard.\n'
+        exit 0 ;;
+    -V|--version)
+        printf 'cpath 0.0.1\n'
+        exit 0 ;;
+esac
+if [ "$#" -ne 1 ]; then
+    printf 'Usage: cpath FILE\n' >&2
+    exit 1
+fi
+if [ ! -e "$1" ]; then
+    printf "cpath: file doesn't exist: %s\n" "$1" >&2
+    exit 1
+fi
+path=$(realpath -- "$1") || exit
+case "$(uname -s)" in
+    Darwin) set -- pbcopy ;;
+    Linux)
+        if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v wl-copy >/dev/null 2>&1; then
+            set -- wl-copy
+        elif [ -n "${DISPLAY:-}" ] && command -v xclip >/dev/null 2>&1; then
+            set -- xclip -selection clipboard
+        elif [ -n "${DISPLAY:-}" ] && command -v xsel >/dev/null 2>&1; then
+            set -- xsel --clipboard --input
+        else
+            printf 'cpath: no desktop clipboard available. Install wl-clipboard for Wayland or xclip for X11.\n' >&2
+            exit 1
+        fi ;;
+    *) printf 'cpath: supported on macOS and Linux desktop sessions.\n' >&2; exit 1 ;;
+esac
+printf '%s' "$path" | "$@" || exit
+printf 'copied: %s\n' "$path"

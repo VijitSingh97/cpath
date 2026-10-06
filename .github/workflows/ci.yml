@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install macOS lint tools
+        if: runner.os == 'macOS'
+        run: brew install shellcheck
+      - run: make test lint
+      - name: Verify install and zsh completion
+        shell: bash
+        run: |
+          stage=$(mktemp -d)
+          make install DESTDIR="$stage" PREFIX=/usr
+          "$stage/usr/bin/cpath" --version
+          zsh -fc 'fpath=("$1" $fpath); autoload -Uz compinit; compinit -D; [[ ${_comps[cpath]} == _cpath ]]' -- "$stage/usr/share/zsh/site-functions"
+
+  debian:
+    name: Test Debian package
+    runs-on: ubuntu-latest
+    container: debian:13-slim
+    steps:
+      - name: Install test tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git make python3 shellcheck zsh
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - run: make test lint deb
+      - name: Verify Debian package installation
+        run: |
+          version=$(cat VERSION)
+          dpkg -i "dist/cpath_${version}_all.deb"
+          test "$(cpath --version)" = "cpath $version"
+          zsh -fc 'autoload -Uz compinit; compinit -D; [[ ${_comps[cpath]} == _cpath ]]'
