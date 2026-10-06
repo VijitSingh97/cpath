@@ -175,6 +175,7 @@ make deb    # Build dist/cpath_<version>_all.deb on Debian/Ubuntu
 ```
 
 CI tests macOS, Ubuntu, and Debian, including package layout and zsh completion.
+Manual CI runs also test Homebrew and signed APT installation from the public URLs.
 Tests never touch the real clipboard. Desktop clipboard integration still needs
 a manual check in a graphical session.
 

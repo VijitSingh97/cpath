@@ -3,6 +3,7 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -24,6 +25,12 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y shellcheck zsh
       - run: make test lint
+      - name: Smoke-test public Homebrew installation
+        if: github.event_name == 'workflow_dispatch' && runner.os == 'macOS'
+        run: |
+          brew tap vijitsingh97/cpath https://github.com/VijitSingh97/cpath.git
+          brew install vijitsingh97/cpath/cpath
+          brew test vijitsingh97/cpath/cpath
       - name: Verify install and zsh completion
         shell: bash
         run: |
@@ -49,4 +56,30 @@ jobs:
           version=$(cat VERSION)
           dpkg -i "dist/cpath_${version}_all.deb"
           test "$(cpath --version)" = "cpath $version"
+          zsh -fc 'autoload -Uz compinit; compinit -D; [[ ${_comps[cpath]} == _cpath ]]'
+
+  apt-install:
+    name: Public APT install (${{ matrix.container }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        container: ["ubuntu:24.04", "debian:13-slim"]
+    container: ${{ matrix.container }}
+    steps:
+      - name: Install prerequisites
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates curl git zsh
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Install from the public signed feed
+        run: |
+          install -d -m 0755 /etc/apt/keyrings
+          curl -fsSL https://vijitsingh97.github.io/cpath/cpath.asc -o /etc/apt/keyrings/cpath.asc
+          chmod 0644 /etc/apt/keyrings/cpath.asc
+          printf 'Types: deb\nURIs: https://vijitsingh97.github.io/cpath/\nSuites: ./\nSigned-By: /etc/apt/keyrings/cpath.asc\n' > /etc/apt/sources.list.d/cpath.sources
+          apt-get update
+          apt-get install -y cpath
+          test "$(cpath --version)" = "cpath $(cat VERSION)"
           zsh -fc 'autoload -Uz compinit; compinit -D; [[ ${_comps[cpath]} == _cpath ]]'
