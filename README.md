@@ -181,6 +181,7 @@ a manual check in a graphical session.
 To release, update `VERSION`, the version in `bin/cpath`, and `CHANGELOG.md`;
 then push a matching `v<version>` tag. The release workflow builds the Debian
 package, publishes GitHub release assets, and deploys the signed APT feed.
+An existing tag can also be published with the Release workflow's manual `tag` input.
 Repository administrators must configure GitHub Pages to use GitHub Actions
 and provide the ASCII-armored signing key as the `APT_SIGNING_KEY` Actions secret.
 Update `Formula/cpath.rb` with the new tag URL and its SHA-256 checksum.

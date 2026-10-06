@@ -3,9 +3,19 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish
+        required: true
+        default: v0.0.1
+
 
 permissions:
   contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 concurrency:
   group: release-pages
@@ -18,11 +28,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - name: Install packaging tools
         run: sudo apt-get update && sudo apt-get install -y apt-utils shellcheck
       - name: Validate release version and build package
         run: |
-          test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+          test "$RELEASE_TAG" = "v$(cat VERSION)"
           test "$(bin/cpath --version)" = "cpath $(cat VERSION)"
           make test lint deb
           dpkg-deb --info dist/*.deb
@@ -41,7 +53,10 @@ jobs:
           state=$(mktemp -d)
           chmod 755 "$state"
           mkdir -p "$state/lists/partial" "$state/download"
-          printf 'deb [signed-by=%s/public/cpath.asc] file:%s/public ./\n' "$PWD" "$PWD" > "$state/sources.list"
+          cp -R public "$state/feed"
+          chmod -R a+rX "$state/feed"
+          gpg --show-keys "$state/feed/cpath.asc"
+          printf 'deb [signed-by=%s/feed/cpath.asc] file:%s/feed ./\n' "$state" "$state" > "$state/sources.list"
           options=(-o "Dir::Etc::sourcelist=$state/sources.list" -o Dir::Etc::sourceparts=- -o "Dir::State::lists=$state/lists")
           sudo apt-get "${options[@]}" update
           cd "$state/download"
@@ -53,8 +68,8 @@ jobs:
         run: |
           cd dist
           sha256sum *.deb > SHA256SUMS
-          gh release create "$GITHUB_REF_NAME" *.deb SHA256SUMS \
-            --repo "$GITHUB_REPOSITORY" --title "cpath $GITHUB_REF_NAME" \
+          gh release create "$RELEASE_TAG" *.deb SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" --title "cpath $RELEASE_TAG" \
             --notes 'Copy canonical file and directory paths on macOS, Ubuntu, and Debian. Includes zsh completion, Homebrew installation, and a signed APT feed. See the README for installation and usage.'
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         with:
