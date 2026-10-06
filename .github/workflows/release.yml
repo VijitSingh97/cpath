@@ -36,6 +36,17 @@ jobs:
           printf '%s' "$APT_SIGNING_KEY" | gpg --batch --import
           ./scripts/build-apt.sh
           gpg --verify public/InRelease
+      - name: Verify the signed feed with APT
+        run: |
+          state=$(mktemp -d)
+          chmod 755 "$state"
+          mkdir -p "$state/lists/partial" "$state/download"
+          printf 'deb [signed-by=%s/public/cpath.asc] file:%s/public ./\n' "$PWD" "$PWD" > "$state/sources.list"
+          options=(-o "Dir::Etc::sourcelist=$state/sources.list" -o Dir::Etc::sourceparts=- -o "Dir::State::lists=$state/lists")
+          sudo apt-get "${options[@]}" update
+          cd "$state/download"
+          sudo apt-get "${options[@]}" download cpath
+          dpkg-deb --info ./*.deb
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}

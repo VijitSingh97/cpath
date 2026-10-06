@@ -55,6 +55,7 @@ sudo apt-get install cpath
 
 This is an APT package feed hosted on GitHub Pages. A Git clone URL cannot be
 used as an APT source. The signing key is scoped to this feed with `Signed-By`.
+The signing key fingerprint is `0CC3 C39C A957 4C9B 1F52 C2E8 A8EB 1080 B99F F3C0`.
 The package recommends `wl-clipboard` and `xclip` for Wayland and X11 support.
 
 Prefer a direct download? Install the `.deb` from the release:
